@@ -17,7 +17,7 @@ sudo tee /etc/apt/sources.list.d/tizen.list > /dev/null
 2. Install gbs and mic.
 
 ```bash
-sudo apt-get update && sudo apt-get install gbs mic
+sudo apt-get update && sudo apt-get install -y gbs mic
 ```
 
 ## Setup `repo` tool
@@ -60,19 +60,25 @@ $ ssh tizen
 
 ## Clone tizen repository
 
-> Note: This instruction is based on Tizen-10.0 / unified-emulator (build 20251028.11482)
+> Note: This instruction is based on Tizen-10.0 / unified-standard (build 20251028.11482)
+
+Clone single repository
+
+```bash
+git clone --branch tizen_10.0_release "git://review.tizen.org/git/platform/core/dotnet/launcher"
+```
 
 1. Initialize `.repo/`.
 
 ```bash
-mkdir ~/tizen/emulator && cd ~/tizen/emulator
-repo init -u ssh://sanghyeon@review.tizen.org:29418/scm/manifest -b tizen -m unified_emulator.xml
+mkdir ~/tizen/standard && cd ~/tizen/standard
+repo init -u ssh://sanghyeon@review.tizen.org:29418/scm/manifest -b tizen -m unified_standard.xml
 ```
 
 2. Download manifests.
 
 ```bash
-wget https://download.tizen.org/releases/milestone/TIZEN/Tizen-10.0/Tizen-10.0-Unified/tizen-10.0-unified_20251028.114828/builddata/manifest/tizen-10.0-unified_20251028.114828_emulator.xml -O .repo/manifests/unified/emulator/projects.xml
+wget https://download.tizen.org/releases/milestone/TIZEN/Tizen-10.0/Tizen-10.0-Unified/tizen-10.0-unified_20251028.114828/builddata/manifest/tizen-10.0-unified_20251028.114828_standard.xml -O .repo/manifests/unified/standard/projects.xml
 ```
 
 3. Exclude `chromium-efl` repository from the manifest.
@@ -84,7 +90,6 @@ echo "<?xml version="1.0" encoding="UTF-8"?>
   <remove-project name="platform/framework/web/chromium-efl" />
 </manifest>" >> .repo/local_manifests/excludes.xml
 ```
-
 
 4. Sync the repo.
 
@@ -99,12 +104,12 @@ repo sync --no-manifest-update -c --no-tags -j16
 
 ## Configure GBS
 
-Create `.gbs.tizen-10.conf` and write the below configuration in it.
+Create `.gbs.conf` and write the below configuration in it.
 
-```
+```text
 [general]
 fallback_to_native = true
-profile = profile.unified_emulator
+profile = profile.unified_standard
 buildroot = /home/sanghyeon/tizen/GBS-ROOT/
 
 #########################################################
@@ -143,9 +148,13 @@ url = https://download.tizen.org/releases/milestone/TIZEN/Tizen-10.0/Tizen-10.0-
 ## Build all packages
 
 ```bash
+gbs -c ../.gbs.conf build -P unified_standard -A aarch64
+```
+
+```bash
 cd ~/<PROJECT_DIR>
-gbs -c /home/sanghyeon/tizen/emulator/.gbs.tizen-10.conf build\
-    -P unified_emulator \
+gbs -c /home/sanghyeon/tizen/standard/.gbs.tizen-10.conf build\
+    -P unified_standard \
     -A x86_64 \
     --threads 16 \
     --define "_smp_mflags -j8" \
@@ -163,9 +172,13 @@ gbs -c /home/sanghyeon/tizen/emulator/.gbs.tizen-10.conf build\
 # Emulator
 wget https://download.tizen.org/releases/milestone/TIZEN/Tizen-10.0/Tizen-10.0-Unified/tizen-10.0-unified_20251028.114828/images/emulator/tizen-headed-emulator64-wayland/tizen-10.0-unified_20251028.114828_tizen-headed-emulator64-wayland.ks
 
-# Standard-aarch64-rpi (boot + headed)
+# Standard-aarch64-rpi
+# Boot
 wget https://download.tizen.org/releases/milestone/TIZEN/Tizen-10.0/Tizen-10.0-Unified/tizen-10.0-unified_20251028.114828/images/standard/tizen-boot-aarch64-rpi/tizen-10.0-unified_20251028.114828_tizen-boot-aarch64-rpi.ks
+# Headed
 wget https://download.tizen.org/releases/milestone/TIZEN/Tizen-10.0/Tizen-10.0-Unified/tizen-10.0-unified_20251028.114828/images/standard/tizen-headed-aarch64/tizen-10.0-unified_20251028.114828_tizen-headed-aarch64.ks
+# Headless
+wget https://download.tizen.org/releases/milestone/TIZEN/Tizen-10.0/Tizen-10.0-Unified/tizen-10.0-unified_20251028.114828/images/standard/tizen-headless-aarch64/tizen-10.0-unified_20251028.114828_tizen-headless-aarch64.ks
 ```
 
 2. Edit the `repo` section of the kickstart file. (Add the last line)
@@ -173,18 +186,27 @@ wget https://download.tizen.org/releases/milestone/TIZEN/Tizen-10.0/Tizen-10.0-U
 ```
 repo --name=gbs_repo --baseurl=https://download.tizen.org/releases/milestone/TIZEN/Tizen-10.0/Tizen-10.0-Unified/tizen-10.0-unified_20251028.114828/repos/emulator/packages/ --ssl_verify=no --priority=99
 repo --name=gbs_base_repo_0 --baseurl=https://download.tizen.org/releases/milestone/TIZEN/Tizen-10.0/Tizen-10.0-Base/tizen-10.0-base_20251028.083647/repos/standard/packages/ --ssl_verify=no --priority=99
-repo --name=local --baseurl=file:///home/sanghyeon/tizen/GBS-ROOT/local/repos/unified_emulator/x86_64/ --priority=1
+repo --name=local --baseurl=file:///home/sanghyeon/tizen/GBS-ROOT/local/repos/unified_standard/aarch64/ --priority=1
 ```
 
 3. Create a Tizen image
 
 ```bash
-gbs createimage --tmpfs --ks-file=tizen-10.0-unified_20251028.114828_tizen-headed-emulator64-wayland.ks
+# Headed
+gbs createimage --ks-file=tizen-10.0-unified_20251028.114828_tizen-headed-emulator64-wayland.ks
+# Headless
+gbs createimage --ks-file=tizen-10.0-unified_20251028.114828_tizen-headless-aarch64.ks
 ```
 
 * `--tmpfs`: Use it to speed up the image creation if there are more than 4GB RAM available.
 
 ## Install tizen studio
+
+```bash
+wget https://download.tizen.org/sdk/Installer/tizen-sdk_10.0/web-cli_Tizen_SDK_10.0_ubuntu-64.bin
+chmod +x web-cli_Tizen_SDK_10.0_ubuntu-64.bin
+./web-cli_Tizen_SDK_10.0_ubuntu-64.bin --accept-license $HOME/tizen/.tizen-studio
+```
 
 ```bash
 export TIZEN_STUDIO=$HOME/tizen/tizen-studio
@@ -215,7 +237,11 @@ Enable HW virtualization in `tizen-studio-data/emulator/vms/T-10.0-x86_64/vm_con
 
 ```bash
 wget https://download.tizen.org/releases/milestone/TIZEN/Tizen-10.0/Tizen-10.0-Unified/tizen-10.0-unified_20251028.114828/images/standard/tizen-boot-aarch64-rpi/tizen-10.0-unified_20251028.114828_tizen-boot-aarch64-rpi.tar.gz
+# Headed
 wget https://download.tizen.org/releases/milestone/TIZEN/Tizen-10.0/Tizen-10.0-Unified/tizen-10.0-unified_20251028.114828/images/standard/tizen-headed-aarch64/tizen-10.0-unified_20251028.114828_tizen-headed-aarch64.tar.gz
+# Headless
+wget https://download.tizen.org/releases/milestone/TIZEN/Tizen-10.0/Tizen-10.0-Unified/tizen-10.0-unified_20251028.114828/images/standard/tizen-headless-aarch64/tizen-10.0-unified_20251028.114828_tizen-headless-aarch64.tar.gz
+
 
 git clone git://review.tizen.org/git/platform/kernel/tizen-fusing-scripts -b tizen
 sudo tizen-fusing-scripts/scripts/sd_fusing.py -d /dev/sdX -t rpi4 --format
@@ -248,6 +274,11 @@ sdb shell
 
 Find a proper version in https://github.com/Samsung/Tizen.NET/blob/main/workload/scripts/version-map.json.
 `workloadVersion` means Tizen's version, and `sdkBand` is a version band of .NET SDK works with it.
+
+```bash
+wget https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.422/dotnet-sdk-8.0.422-linux-x64.tar.gz
+tar zxf dotnet-sdk-8.0.422-linux-x64.tar.gz -C $HOME/tizen/.dotnet
+```
 
 2. Install Tizen workload (Reference: https://github.com/Samsung/Tizen.NET/tree/main/workload/scripts)
 

@@ -34,6 +34,8 @@ sleep 2
 
 MNT_A="$(mktemp -d)"
 MNT_B="$(mktemp -d)"
+declare -a MOUNTED_ROOTS=()
+declare -a MOUNTED_PARTS=()
 
 cleanup() {
   sync || true
@@ -43,8 +45,31 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mount "$ROOT_A" "$MNT_A"
-mount "$ROOT_B" "$MNT_B"
+mount_rootfs() {
+  part="$1"
+  mnt="$2"
+  name="$3"
+
+  if [ ! -b "$part" ]; then
+    echo "Skipping $name ($part): block device does not exist" >&2
+    return 0
+  fi
+
+  fstype="$(lsblk -no FSTYPE "$part" | head -n 1 | tr -d "[:space:]" || true)"
+  if [ -z "$fstype" ]; then
+    echo "Skipping $name ($part): no filesystem detected" >&2
+    return 0
+  fi
+
+  if ! mount "$part" "$mnt"; then
+    echo "Failed to mount $name ($part, fstype=$fstype)" >&2
+    echo "Check dmesg for the kernel mount error." >&2
+    exit 1
+  fi
+
+  MOUNTED_ROOTS+=("$mnt")
+  MOUNTED_PARTS+=("$part")
+}
 
 inject_rootfs() {
   root="$1"
@@ -98,8 +123,17 @@ SERVICE
     "$root/etc/systemd/system/multi-user.target.wants/force-eth0-sdb-ip.service"
 }
 
-inject_rootfs "$MNT_A"
-inject_rootfs "$MNT_B"
+mount_rootfs "$ROOT_A" "$MNT_A" "rootfs_a"
+mount_rootfs "$ROOT_B" "$MNT_B" "rootfs_b"
 
-echo "Injected static eth0 IP service into $ROOT_A and $ROOT_B"
+if [ "${#MOUNTED_ROOTS[@]}" -eq 0 ]; then
+  echo "No mountable rootfs partitions found on $DEV" >&2
+  exit 1
+fi
+
+for i in "${!MOUNTED_ROOTS[@]}"; do
+  inject_rootfs "${MOUNTED_ROOTS[$i]}"
+done
+
+echo "Injected static eth0 IP service into: ${MOUNTED_PARTS[*]}"
 EOF
