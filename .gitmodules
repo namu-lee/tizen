@@ -1,0 +1,12 @@
+[submodule "Tizen-CSharp-Samples"]
+	path = Tizen-CSharp-Samples
+	url = git@github.com:Samsung/Tizen-CSharp-Samples.git
+[submodule "maui-samples"]
+	path = maui-samples
+	url = git@github.com:dotnet/maui-samples.git
+[submodule "tizen-fusing-scripts"]
+	path = tizen-fusing-scripts
+	url = git://review.tizen.org/git/platform/kernel/tizen-fusing-scripts
+[submodule "launcher"]
+	path = launcher
+	url = git://review.tizen.org/git/platform/core/dotnet/launcher
