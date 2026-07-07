@@ -7,3 +7,5 @@ This repository contains workflow documents, scripts and sample apps for develop
 ```bash
 git clone --recurse-submodules git@github.com:namu-lee/tizen.git
 ```
+
+See [workflow documentation](./docs/workflow.md) for next steps.
