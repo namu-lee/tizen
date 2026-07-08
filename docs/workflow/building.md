@@ -107,8 +107,26 @@ url = https://download.tizen.org/releases/milestone/TIZEN/Tizen-10.0/Tizen-10.0-
     ```bash
     cd <repository>
     git switch --detach tizen_10.0_release # Optional
-    gbs -c ../.gbs.conf build -P unified_standard -A aarch64 --buildroot ../.GBS-ROOT
+    gbs -c ../.gbs.conf build -P unified_standard -A aarch64 --buildroot ../.GBS-ROOT --include-all
     cd ../
+    ```
+
+    Modify the RPM spec to set the right capability of the executable.
+
+    ```diff
+    diff --git a/packaging/dotnet-launcher.spec b/packaging/dotnet-launcher.spec
+    index c1282f9..86e1768 100644
+    --- a/packaging/dotnet-launcher.spec
+    +++ b/packaging/dotnet-launcher.spec
+    @@ -229,10 +229,10 @@ chsmack -a User /usr/bin/dotnet-uts-loader
+    %{_bindir}/dotnet-launcher
+    -%{_bindir}/dotnet-loader
+    +%caps(cap_setgid,cap_sys_admin,cap_sys_nice,cap_mac_admin=ei) %{_bindir}/dotnet-loader
+    %{_bindir}/dotnet
+    %{_bindir}/dotnet-inhouse
+    -%{_bindir}/dotnet-hydra-loader
+    +%caps(cap_setgid,cap_sys_admin,cap_sys_nice,cap_mac_admin=ei) %{_bindir}/dotnet-hydra-loader
+    %{_libdir}/libdotnet_launcher_util.so
     ```
 
 ### Installing the built RPM package
@@ -126,6 +144,7 @@ A built RPM can be installed on the running Tizen device using `sdb`.
 1. Resize the root filesystem and re-mount it with a write permission.
 
     ```bash
+    sdb shell
     resize2fs /dev/mmcblk0p2
     mount -o remount,rw /
     ```
