@@ -141,7 +141,7 @@ A built RPM can be installed on the running Tizen device using `sdb`.
     sdb push .GBS-ROOT/local/repos/unified_standard/aarch64/RPMS/<name>.rpm /tmp/
     ```
 
-1. Resize the root filesystem and re-mount it with a write permission.
+1. (Optional) Resize the root filesystem and re-mount it with a write permission, if needed.
 
     ```bash
     sdb shell
